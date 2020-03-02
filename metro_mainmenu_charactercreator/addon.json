@@ -1,0 +1,11 @@
+{
+	"title"		:	"DCC - Deadman Character Creation",
+	"type"		:	"tool",
+	"tags"		:	["roleplay", "build"] ,
+	"ignore"	:
+	[
+		"*.psd",
+		"*.vcproj",
+		"*.svn*"
+	]
+}
