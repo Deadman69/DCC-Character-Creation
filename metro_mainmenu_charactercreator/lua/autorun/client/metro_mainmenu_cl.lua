@@ -542,7 +542,7 @@ function CreateCharacterSecondMenu(characterID, name)
 	else
 		for _, tableValue in pairs(MConf.BaseSkinsFemale) do
 			for rankAllowedID, _ in pairs(tableValue.RankAllowed) do
-				if tableValue.RankAllowed == LocalPlayer():GetUserGroup() then
+				if rankAllowedID == LocalPlayer():GetUserGroup() then
 					skinList:AddChoice( tableValue.Model )
 				end
 			end

@@ -1,5 +1,5 @@
 MConf = MConf or {}
-MConf.MainVersion = 1.2 -- Don't touch it !
+MConf.MainVersion = 1.5 -- Don't touch it !
 
 --[[ Skins ]]
 MConf.DefaultSkin = "models/half-dead/metroll/m1b1.mdl" -- default skin
@@ -235,6 +235,8 @@ MConf.SavePosition = true -- Should we save and apply character Position ?
 		["Staff"] = true,
 		["Fix Team"] = true,
 	}
+	MConf.SaveAngle = false -- Should we save and apply character Angle ? ACTIVE ONLY IF POSITION IS ENABLED
+							-- if you have a third person addon, desactive it
 
 
 
@@ -246,5 +248,12 @@ MConf.CommandRenameChar = "!charRename" -- format: "!characterRename <SteamID64 
 		["superadmin"] = true,
 		["admin"] = true,
 	}
+MConf.CommandUnlockData = "!charUnlock" -- formatl: "!charUnlock <pos | angle | weapons | health | armor | food | money>" while looking at a player
+	MConf.CommandUnlockDataAllowedRanks = { -- Ranks wich could access to the unlock command
+		["superadmin"] = true,
+		["admin"] = true,
+		["mod"] = true,
+	}
 
-MConf.CommandDeleteAllData = "!characterDeleteAll" -- BE CAREFULL, THIS WILL DELETE ALL THE CHARACTERS TABLE (Will restart server). Only allowed to superadmins
+MConf.CommandDeleteAllData = "!characterDeleteAll" 	-- BE CAREFULL, THIS WILL DELETE ALL THE CHARACTERS TABLE (Will restart server). Only allowed to superadmins
+													-- If you have the whitelist addon, every whitelist will be removed too

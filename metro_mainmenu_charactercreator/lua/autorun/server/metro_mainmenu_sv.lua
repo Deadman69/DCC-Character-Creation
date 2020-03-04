@@ -30,6 +30,7 @@ if not sql.TableExists("MetroCharacters") then
 			CharacterFood		INTEGER,				  		-- Character Food
 			CharacterWeapons    TEXT,					  		-- Character Weapons (json table)
 			CharacterPosition   VARCHAR(255),			  		-- Character Position (json table)
+			CharacterAngle		VARHCAR(255),					-- Character Angle (json table)
 
 			PRIMARY KEY(CharacterOwner, CharacterID)
 		)
@@ -39,7 +40,7 @@ end
 
 
 --[[ Custom Functions ]]
-local function MMNotification(players, message, notifType, time, sound)
+function MMNotification(players, message, notifType, time, sound)
 	net.Start("Metro::OrderToPlayer")
 		net.WriteString("notification")
 		net.WriteString(message)
@@ -53,45 +54,143 @@ local function MMNotification(players, message, notifType, time, sound)
 	net.Send(players)
 end
 
+
+function MetroWhitelistActive()
+	if MConf.WhitelistVersion then
+		return true
+	else
+		return false
+	end
+end
+
+
+
+
+local function updateData(isPrivate, plyPrivate)
+	sql.Begin() -- In case if there is a lot of players
+
+	if not isPrivate then
+		for _, v in pairs(player.GetAll()) do
+			local charID = v:GetNWInt("Metro::CharacterID")
+			sql.Query("UPDATE MetroCharacters SET CharacterMoney = '"..v:getDarkRPVar("money").."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
+			sql.Query("UPDATE MetroCharacters SET CharacterHealth = '"..v:Health().."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
+			sql.Query("UPDATE MetroCharacters SET CharacterArmor = '"..v:Armor().."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
+			sql.Query("UPDATE MetroCharacters SET CharacterFood = '"..v:getDarkRPVar("Energy").."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
+
+			local plySweps = {}
+			for _, swep in pairs(v:GetWeapons()) do
+		 		local actualSwepString = string.Explode("[", tostring(swep))[3] -- keep only "weapon_crossbow]"
+		 		actualSwepString = string.Replace(actualSwepString, "]", "" ) -- removing the "]"
+		 		table.insert(plySweps, actualSwepString)
+			end
+			plySweps = util.TableToJSON(plySweps)
+			sql.Query("UPDATE MetroCharacters SET CharacterWeapons = '"..plySweps.."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
+
+			local pos = tostring(v:GetPos())
+			pos = string.Explode(" ", pos) -- Table
+			pos = util.TableToJSON(pos) -- Json table
+			sql.Query("UPDATE MetroCharacters SET CharacterPosition = '"..pos.."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
+
+			local angle = tostring(v:GetPos())
+			angle = string.Explode(" ", angle) -- Table
+			angle = util.TableToJSON(angle) -- Json table
+			sql.Query("UPDATE MetroCharacters SET CharacterAngle = '"..angle.."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
+		end
+	else
+		local charID = plyPrivate:GetNWInt("Metro::CharacterID")
+		sql.Query("UPDATE MetroCharacters SET CharacterMoney = '"..plyPrivate:getDarkRPVar("money").."' WHERE CharacterOwner = '"..plyPrivate:SteamID64().."' AND CharacterID = '"..charID.."'")
+		sql.Query("UPDATE MetroCharacters SET CharacterHealth = '"..plyPrivate:Health().."' WHERE CharacterOwner = '"..plyPrivate:SteamID64().."' AND CharacterID = '"..charID.."'")
+		sql.Query("UPDATE MetroCharacters SET CharacterArmor = '"..plyPrivate:Armor().."' WHERE CharacterOwner = '"..plyPrivate:SteamID64().."' AND CharacterID = '"..charID.."'")
+		sql.Query("UPDATE MetroCharacters SET CharacterFood = '"..plyPrivate:getDarkRPVar("Energy").."' WHERE CharacterOwner = '"..plyPrivate:SteamID64().."' AND CharacterID = '"..charID.."'")
+
+		local plySweps = {}
+		for _, swep in pairs(plyPrivate:GetWeapons()) do
+	 		local actualSwepString = string.Explode("[", tostring(swep))[3] -- keep only "weapon_crossbow]"
+	 		actualSwepString = string.Replace(actualSwepString, "]", "" ) -- remoplyPrivateing the "]"
+	 		table.insert(plySweps, actualSwepString)
+		end
+		plySweps = util.TableToJSON(plySweps)
+		sql.Query("UPDATE MetroCharacters SET CharacterWeapons = '"..plySweps.."' WHERE CharacterOwner = '"..plyPrivate:SteamID64().."' AND CharacterID = '"..charID.."'")
+
+		local pos = tostring(plyPrivate:GetPos())
+		pos = string.Explode(" ", pos) -- Table
+		pos = util.TableToJSON(pos) -- Json table
+		sql.Query("UPDATE MetroCharacters SET CharacterPosition = '"..pos.."' WHERE CharacterOwner = '"..plyPrivate:SteamID64().."' AND CharacterID = '"..charID.."'")
+		
+		local angle = tostring(plyPrivate:EyeAngles())
+		angle = string.Explode(" ", angle) -- Table
+		angle = util.TableToJSON(angle) -- Json table
+		sql.Query("UPDATE MetroCharacters SET CharacterAngle = '"..angle.."' WHERE CharacterOwner = '"..plyPrivate:SteamID64().."' AND CharacterID = '"..charID.."'")
+	end
+
+	sql.Commit() -- Same as sql.Begin()
+end
+timer.Create("Metro::updateData", MConf.AutosaveTime, 0, function()
+	updateData(false)
+end)
+
+
 local function PlyDefineChar(charChoosed, ply)
+	updateData(true, ply) -- update data for the current char before switching
+
+	ply:SetNWInt("Metro::CharacterID", charChoosed)
+
 	ply:Spawn()
-	print(charChoosed)
-	file.Write("metro/"..ply:SteamID64().."/lastplayed.txt", tostring(charChoosed))
+	file.Write("metro/"..ply:SteamID64()..".txt", tostring(charChoosed))
 
 	ply:setDarkRPVar("money", tonumber(sql.Query("SELECT CharacterMoney FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterMoney"]) )
 	ply:SetModel(sql.Query("SELECT CharacterSkin FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterSkin"])
 	ply:SetBodyGroups(sql.Query("SELECT CharacterBodygroup FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterBodygroup"])
 	ply:setRPName(sql.Query("SELECT CharacterName FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterName"], false)
 
-	if MConf.SaveHealth && MConf.SaveHealthBlacklistedTeams[team.GetName(ply:Team())] then
+	if MConf.SaveHealth && not MConf.SaveHealthBlacklistedTeams[team.GetName(ply:Team())] then
 		local health = tonumber(sql.Query("SELECT CharacterHealth FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterHealth"])
 		if isnumber(health) then
 			ply:SetHealth(health)
 		end
 	end
-	if MConf.SaveArmor && MConf.SaveArmorBlacklistedTeams[team.GetName(ply:Team())] then
+	if MConf.SaveArmor && not MConf.SaveArmorBlacklistedTeams[team.GetName(ply:Team())] then
 		local armor = tonumber(sql.Query("SELECT CharacterArmor FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterArmor"])
 		if isnumber(armor) then
 			ply:SetArmor(armor)
 		end
 	end
-	if MConf.SaveFood && MConf.SaveFoodBlacklistedTeams[team.GetName(ply:Team())] then
+	if MConf.SaveFood && not MConf.SaveFoodBlacklistedTeams[team.GetName(ply:Team())] then
 		local food = tonumber(sql.Query("SELECT CharacterFood FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterFood"])
 		if isnumber(food) then
 			ply:setDarkRPVar("Energy", food)
 		end
 	end
-	if MConf.SaveWeapons && MConf.SaveWeaponsBlacklistedTeams[team.GetName(ply:Team())] then
+	if MConf.SaveWeapons && not MConf.SaveWeaponsBlacklistedTeams[team.GetName(ply:Team())] then
 		local swepList = sql.Query("SELECT CharacterWeapons FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterWeapons"]
-		for _, swep in pairs(util.JSONToTable(swepList)) do
-			ply:Give(swep)
+		if not swepList == "NULL" then
+			for _, swep in pairs(util.JSONToTable(swepList)) do
+				ply:Give(swep)
+			end
 		end
 	end
-	if MConf.SavePosition && MConf.SavePositionBlacklistedTeams[team.GetName(ply:Team())] then
+	if MConf.SavePosition && not MConf.SavePositionBlacklistedTeams[team.GetName(ply:Team())] then
 		local pos = sql.Query("SELECT CharacterPosition FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterPosition"] 
-		pos = util.JSONToTable(pos) -- Table
-		if istable(pos) then
-			ply:SetPos(Vector(pos[1], pos[2], pos[3]))
+		pos = util.JSONToTable(pos) -- to Table
+		if pos ~= nil then
+			if pos[1] and pos[2] and pos[3] then
+				if istable(pos) then
+					ply:SetPos(Vector(pos[1], pos[2], pos[3]))
+				end
+			end
+		end
+
+		if MConf.SaveAngle then
+			local angle = sql.Query("SELECT CharacterAngle FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")[1]["CharacterAngle"] 
+			angle = util.JSONToTable(angle) -- to Table
+			if angle ~= nil then
+				if angle[1] and angle[2] and angle[3] then
+					if istable(angle) then
+						-- L'angle déconne à cause de la troisième personne
+						ply:SetEyeAngles(Angle(angle[1], angle[2], angle[3]))
+					end
+				end
+			end
 		end
 	end
 
@@ -127,41 +226,12 @@ local function getAllChars(ply)
 		    }
 	  	end
 	end
+	
 	net.Start("Metro::OrderToPlayer")
 		net.WriteString("receiveAllCharacters")
 		net.WriteTable( characters )
 	net.Send(ply)
 end
-
-
-local function updateData()
-	sql.Begin() -- In case if there is a lot of players
-
-	for _, v in pairs(player.GetAll()) do
-		local charID = v:GetNWInt("Metro::CharacterID")
-		sql.Query("UPDATE MetroCharacters SET CharacterMoney = '"..v:getDarkRPVar("money").."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
-		sql.Query("UPDATE MetroCharacters SET CharacterHealth = '"..v:Health().."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
-		sql.Query("UPDATE MetroCharacters SET CharacterArmor = '"..v:Armor().."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
-		sql.Query("UPDATE MetroCharacters SET CharacterFood = '"..v:getDarkRPVar("Energy").."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
-
-		local plySweps = {}
-		for _, swep in pairs(v:GetWeapons()) do
-	 		local actualSwepString = string.Explode("[", tostring(swep))[3] -- keep only "weapon_crossbow]"
-	 		actualSwepString = string.Replace(actualSwepString, "]", "" ) -- removing the "]"
-	 		table.insert(plySweps, actualSwepString)
-		end
-		plySweps = util.TableToJSON(plySweps)
-		sql.Query("UPDATE MetroCharacters SET CharacterWeapons = '"..plySweps.."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
-
-		local pos = tostring(v:GetPos())
-		pos = string.Explode(" ", pos) -- Table
-		pos = util.TableToJSON(pos) -- Json table
-		sql.Query("UPDATE MetroCharacters SET CharacterPosition = '"..pos.."' WHERE CharacterOwner = '"..v:SteamID64().."' AND CharacterID = '"..charID.."'")
-	end
-
-	sql.Commit() -- Same as sql.Begin()
-end
-timer.Create("Metro::updateData", MConf.AutosaveTime, 0, updateData)
 
 local function findingPlayer(search)
 	local playerFindedEnt = nil
@@ -183,7 +253,7 @@ local function DeleteCharAdmin(requester, search, charIDToDelete) -- search = St
 
 		if charIDToDelete == playerFindedEnt:GetNWInt("Metro::CharacterID") then -- If admin deleted the current player character
 			playerFindedEnt:Kick("Please reconnect to apply changes (Character deleted by an admin)")
-			file.Write("metro/"..playerFindedEnt:SteamID64().."/lastplayed.txt", "")
+			file.Write("metro/"..playerFindedEnt:SteamID64()..".txt", "")
 		end
 		MMNotification(requester, "The character have been deleted and the player has been kicked !", 0, 3)
 	end
@@ -208,9 +278,8 @@ end
 
 --[[ Hooks ]]
 hook.Add( "PlayerInitialSpawn", "Metro::MainHook::PlayerInitialSpawn", function(ply)
-	if not file.Exists("metro/"..ply:SteamID64(), "DATA") then
-		file.CreateDir("metro/"..ply:SteamID64())
-		file.Write("metro/"..ply:SteamID64().."/lastplayed.txt", "")
+	if not file.Exists("metro/"..ply:SteamID64()..".txt", "DATA") then
+		file.Write("metro/"..ply:SteamID64()..".txt", "")
 	end
 
 	net.Start("Metro::OrderToPlayer")
@@ -236,14 +305,7 @@ hook.Add( "PlayerSay", "Metro::MainHook::PlayerSay", function( ply, text )
 		ply:Freeze(true)
 		ply:AllowFlashlight(false)
 	elseif playerInput[1] == MConf.CommandDeleteChar then
-		local rankAllowed = false
-		for rank, _ in pairs(MConf.CommandDeleteCharAllowedRanks) do
-			if ply:GetUserGroup() == rank then
-				rankAllowed = true
-			end
-		end
-
-		if rankAllowed then
+		if MConf.CommandDeleteCharAllowedRanks[ply:GetUserGroup()] then
 			if playerInput[2] then
 				if playerInput[3] then
 					DeleteCharAdmin(ply, playerInput[2], playerInput[3])
@@ -257,14 +319,7 @@ hook.Add( "PlayerSay", "Metro::MainHook::PlayerSay", function( ply, text )
 			MMNotification(ply, "You have not access to this command !", 1, 3)
 		end
 	elseif playerInput[1] == MConf.CommandRenameChar then
-		local rankAllowed = false
-		for rank, _ in pairs(MConf.CommandDeleteCharAllowedRanks) do
-			if ply:GetUserGroup() == rank then
-				rankAllowed = true
-			end
-		end
-
-		if rankAllowed then
+		if MConf.CommandDeleteCharAllowedRanks[ply:GetUserGroup()] then
 			if playerInput[2] then
 				if playerInput[3] then
 					if playerInput[4] then
@@ -283,12 +338,75 @@ hook.Add( "PlayerSay", "Metro::MainHook::PlayerSay", function( ply, text )
 		end
 	elseif playerInput[1] == MConf.CommandDeleteAllData then
 		if ply:IsSuperAdmin() then
-			sql.Query("DELETE FROM MetroCharacters") -- Delete database
+			if not MetroWhitelistActive() then -- if whitelist is not installed
+				sql.Query("DROP TABLE MetroCharacters") -- Delete database
+			else -- if whitelist is installed
+				if sql.TableExists( "MetroWhitelistJob" ) then
+					sql.Query([[
+						PRAGMA foreign_keys = OFF; 				-- Disable foreign keys constraint
+						DROP TABLE MetroWhitelistJob;			-- Drop table
+						PRAGMA foreign_keys = ON;				-- Enable foreign keys
+					]])
+				end
+
+				if sql.TableExists( "MetroWhitelistCharacters" ) then
+					sql.Query([[
+						PRAGMA foreign_keys = OFF; 				-- Disable foreign keys constraint
+						DROP TABLE MetroWhitelistCharacters;	-- Drop table
+						PRAGMA foreign_keys = ON;				-- Enable foreign keys
+					]])
+				end
+
+				if sql.TableExists( "MetroCharacters" ) then
+					sql.Query([[
+						PRAGMA foreign_keys = OFF; 				-- Disable foreign keys constraint
+						DROP TABLE MetroCharacters;	-- Drop table
+						PRAGMA foreign_keys = ON;				-- Enable foreign keys
+					]])
+				end
+			end
+
+			local filesToDelete = file.Find("metro/*", "DATA")
+			for _, v in pairs(filesToDelete) do
+				file.Delete("metro/"..v)
+			end
 
 			MMNotification(ply, "Every data from players have been deleted. Server restarting in 3 seconds...", 0, 3)
+
 			timer.Simple(3, function()
 				game.ConsoleCommand("changelevel "..game.GetMap().."\n")
 			end)
+		else
+			MMNotification(ply, "You have not access to this command !", 1, 3)
+		end
+	elseif playerInput[1] == MConf.CommandUnlockData then
+		if MConf.CommandUnlockDataAllowedRanks[ply:GetUserGroup()] then
+			if playerInput[2] then
+				local ent = ply:GetEyeTrace().Entity
+				if ent:IsPlayer() then
+					if playerInput[2] == "money" then
+						sql.Query("UPDATE MetroCharacters SET CharacterMoney = 0 WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
+					elseif playerInput[2] == "health" then
+						sql.Query("UPDATE MetroCharacters SET CharacterHealth = NULL WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
+					elseif  playerInput[2] == "armor" then
+						sql.Query("UPDATE MetroCharacters SET CharacterArmor = NULL WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
+					elseif  playerInput[2] == "food" then
+						sql.Query("UPDATE MetroCharacters SET CharacterFood = NULL WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
+					elseif  playerInput[2] == "weapons" then
+						sql.Query("UPDATE MetroCharacters SET CharacterWeapons = NULL WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
+					elseif  playerInput[2] == "pos" then
+						sql.Query("UPDATE MetroCharacters SET CharacterPosition = NULL WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
+					elseif  playerInput[2] == "angle" then
+						sql.Query("UPDATE MetroCharacters SET CharacterAngle = NULL WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
+					end
+
+					MMNotification(ply, "You have reset the value for this player !", 0, 3)
+				else
+					MMNotification(ply, "You have to look at a player !", 1, 3)
+				end
+			else
+				MMNotification(ply, "You have to specify an argument (pos, angle, weapons, health, armor, food, money) !", 1, 3)
+			end
 		else
 			MMNotification(ply, "You have not access to this command !", 1, 3)
 		end
@@ -306,6 +424,15 @@ hook.Add( "PlayerSpawn", "Metro::MainHook::PlayerSpawn", function(ply)
 				ply:SetBodyGroups(sql.Query("SELECT CharacterBodygroup FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..actualCharacter.."'")[1]["CharacterBodygroup"])
 			end
 		end)
+	end
+end)
+
+hook.Add( "PlayerDisconnected", "Metro::MainHook::PlayerDisconnected", function(ply)
+	if not MConf.BlacklistTeams[team.GetName(ply:Team())] then
+		local actualCharacter = ply:GetNWInt("Metro::CharacterID")
+		if not actualCharacter == 0 then
+			updateData(true, ply) -- update before player leave
+		end
 	end
 end)
 
@@ -331,10 +458,9 @@ net.Receive("Metro::PlyRequest", function(len, ply)
 	if request == "getAllChars" then
 		getAllChars(ply)
 	elseif request == "playLastChar" then
-		local charChoosed = tonumber(file.Read("metro/"..ply:SteamID64().."/lastplayed.txt", "DATA"))
+		local charChoosed = tonumber(file.Read("metro/"..ply:SteamID64()..".txt", "DATA"))
 		if charChoosed then
 			PlyDefineChar(charChoosed, ply)
-			ply:SetNWInt("Metro::CharacterID", charChoosed)
 		else
 			MMNotification(ply, "Error, you already playing this character !", 1, 3)
 
@@ -348,7 +474,6 @@ net.Receive("Metro::PlyRequest", function(len, ply)
 		local charChoosed = net.ReadInt(4)
 		if ply:GetNWInt("Metro::CharacterID") ~= charChoosed then
 			PlyDefineChar(charChoosed, ply)
-			ply:SetNWInt("Metro::CharacterID", charChoosed)
 		else
 			MMNotification(ply, "Error, you already playing this character !", 1, 3)
 
@@ -386,7 +511,7 @@ net.Receive("Metro::PlyRequest", function(len, ply)
 		end
 
 		if skinAllowed then
-			sql.Query("INSERT INTO MetroCharacters(CharacterOwner,CharacterID,CharacterName,CharacterSkin,CharacterBodygroup,CharacterPosition,CharacterMoney) VALUES('"..ply:SteamID64().."', '"..charChoosed.."', '"..charName.."', '"..charSkin.."', '"..charBodygroup.."', '"..string.Replace( "Vector("..tostring(ply:GetPos()), " ", ", " )..")".."', 0)") -- SQL
+			sql.Query("INSERT INTO MetroCharacters(CharacterOwner,CharacterID,CharacterName,CharacterSkin,CharacterBodygroup,CharacterMoney) VALUES('"..ply:SteamID64().."', '"..charChoosed.."', '"..charName.."', '"..charSkin.."', '"..charBodygroup.."', 0)") -- SQL
 
 			MMNotification(ply, "Character created !", 0, 3)
 		else
