@@ -1,4 +1,4 @@
-#Functions 
+# Functions 
 
 -- ply: player entity to check
 -- numberTeam: the NUMBER of the team to check
