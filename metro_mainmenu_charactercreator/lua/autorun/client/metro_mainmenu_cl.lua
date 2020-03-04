@@ -795,15 +795,20 @@ function FirstMenu()
 	image:SetSize( ScrW(), ScrH() )
 	image:SetImage( "deadman/metro/metro.png" ) -- Set material relative to "garrysmod/materials/"
 
-	local label = vgui.Create( "DLabel", mainPanel )
-	label:SizeToContentsX( ScrW()/3.2 )
-	label:SizeToContentsY( ScrH()/54 )
-	label:SetFont( "MetroMainMenu_30" )
-	label:SetPos( ScrW()/1.5, ScrH()/1.1 )
-	label:SetText( "APPUYEZ SUR UNE TOUCHE POUR CONTINUER" )
-	label.Paint = function()
-		label:SetTextColor( Color( 255, 255, 255, TextAlpha ) )
-	end
+	local text = ""
+	GNLib.AutoTranslate( MConf.LanguageType, "PRESS A KEY TO CONTINUE", function(callback) text = callback end )
+	timer.Simple(0.3, function() -- timer to let the server respons
+		local label = vgui.Create( "DLabel", mainPanel )
+		label:SizeToContentsX( ScrW()/3.2 )
+		label:SizeToContentsY( ScrH()/54 )
+		label:SetFont( "MetroMainMenu_30" )
+		label:SetPos( ScrW()/1.5, ScrH()/1.1 )
+
+		label:SetText( text )
+		label.Paint = function()
+			label:SetTextColor( Color( 255, 255, 255, TextAlpha ) )
+		end
+	end)
 end
 
 

@@ -247,7 +247,8 @@ end
 local function DeleteCharAdmin(requester, search, charIDToDelete) -- search = SteamID or SteamID64 or Name
 	local playerFindedEnt = findingPlayer(search)
 	if not playerFindedEnt then -- If we haven't find the player in the connected players
-		MMNotification(requester, "We haven't find any players for the argument you supplied: '"..tostring(search).."'", 1, 3)
+		--MMNotification(requester, "We haven't find any players for the argument you supplied: '"..tostring(search).."'", 1, 3)
+		GNLib.AutoTranslate( MConf.LanguageType, "We haven't find any players for the argument you supplied !", function(callback) MMNotification(ply, callback, 1, 3) end )
 	else
 		sql.Query("DELETE FROM MetroCharacters WHERE CharacterOwner = '"..playerFindedEnt:SteamID64().."' AND CharacterID = '"..charIDToDelete.."'")
 
@@ -255,22 +256,26 @@ local function DeleteCharAdmin(requester, search, charIDToDelete) -- search = St
 			playerFindedEnt:Kick("Please reconnect to apply changes (Character deleted by an admin)")
 			file.Write("metro/"..playerFindedEnt:SteamID64()..".txt", "")
 		end
-		MMNotification(requester, "The character have been deleted and the player has been kicked !", 0, 3)
+		--MMNotification(requester, "The character have been deleted and the player has been kicked !", 0, 3)
+		GNLib.AutoTranslate( MConf.LanguageType, "The character have been deleted and the player has been kicked !", function(callback) MMNotification(ply, callback, 0, 3) end )
 	end
 end
 
 local function RenameCharAdmin(requester, search, charIDToRename, newName)
 	local playerFindedEnt = findingPlayer(search)
 	if not playerFindedEnt then -- If we haven't find the player in the connected players
-		MMNotification(requester, "We haven't find any players for the argument you supplied: '"..tostring(search).."'", 1, 3)
+		--MMNotification(requester, "We haven't find any players for the argument you supplied: '"..tostring(search).."'", 1, 3)
+		GNLib.AutoTranslate( MConf.LanguageType, "We haven't find any players for the argument you supplied !", function(callback) MMNotification(ply, callback, 1, 3) end )
 	else
 		local request = sql.Query("SELECT CharacterName FROM MetroCharacters WHERE CharacterName = '"..tostring(newName).."'") -- nil if name is not already existing
 		if request == nil then
 			sql.Query("UPDATE MetroCharacters SET CharacterName = '"..tostring(newName).."' WHERE CharacterOwner = '"..playerFindedEnt:SteamID64().."' AND CharacterID = '"..charIDToRename.."'")
 			playerFindedEnt:Kick("Please reconnect to apply changes (Character renamed by an admin)")
-			MMNotification(requester, "The character have been renamed !", 0, 3)
+			--MMNotification(requester, "The character have been renamed !", 0, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "The character have been renamed !", function(callback) MMNotification(ply, callback, 0, 3) end )
 		else
-			MMNotification(requester, "This name is already used !", 1, 3)
+			--MMNotification(requester, "This name is already used !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "This name is already used !", function(callback) MMNotification(ply, callback, 1, 3) end )
 		end
 	end
 end
@@ -310,13 +315,15 @@ hook.Add( "PlayerSay", "Metro::MainHook::PlayerSay", function( ply, text )
 				if playerInput[3] then
 					DeleteCharAdmin(ply, playerInput[2], playerInput[3])
 				else
-					MMNotification(ply, "You have to specify the character to delete !", 1, 3)
+					--MMNotification(ply, "You have to specify the character to delete !", 1, 3)
+					GNLib.AutoTranslate( MConf.LanguageType, "You have to specify the character to delete !", function(callback) MMNotification(ply, callback, 1, 3) end )
 				end
 			else
-				MMNotification(ply, "You have to specify the SteamID64 / Player Name / SteamID", 1, 3)
+				--MMNotification(ply, "You have to specify the SteamID64 / Player Name / SteamID", 1, 3)
+				GNLib.AutoTranslate( MConf.LanguageType, "You have to specify the SteamID64 / Player name / SteamID", function(callback) MMNotification(ply, callback, 1, 3) end )
 			end
 		else
-			MMNotification(ply, "You have not access to this command !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "You have not access to this command !", function(callback) MMNotification(ply, callback, 1, 3) end )
 		end
 	elseif playerInput[1] == MConf.CommandRenameChar then
 		if MConf.CommandDeleteCharAllowedRanks[ply:GetUserGroup()] then
@@ -325,16 +332,19 @@ hook.Add( "PlayerSay", "Metro::MainHook::PlayerSay", function( ply, text )
 					if playerInput[4] then
 						RenameCharAdmin(ply, playerInput[2], playerInput[3], table.concat(playerInput, " ", 4) )
 					else
-						MMNotification(ply, "You have to provide a new name !", 1, 3)
+						--MMNotification(ply, "You have to provide a new name !", 1, 3)
+						GNLib.AutoTranslate( MConf.LanguageType, "You have to provide a new name !", function(callback) MMNotification(ply, callback, 1, 3) end )
 					end
 				else
-					MMNotification(ply, "You have to specify the character to rename !", 1, 3)
+					--MMNotification(ply, "You have to specify the character to rename !", 1, 3)
+					GNLib.AutoTranslate( MConf.LanguageType, "You have to specify the character to rename !", function(callback) MMNotification(ply, callback, 1, 3) end )
 				end
 			else
-				MMNotification(ply, "You have to specify the SteamID64 / Player Name / SteamID", 1, 3)
+				--MMNotification(ply, "You have to specify the SteamID64 / Player Name / SteamID", 1, 3)
+				GNLib.AutoTranslate( MConf.LanguageType, "You have to specify the SteamID64 / Player name / SteamID", function(callback) MMNotification(ply, callback, 1, 3) end )
 			end
 		else
-			MMNotification(ply, "You have not access to this command !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "You have not access to this command !", function(callback) MMNotification(ply, callback, 1, 3) end )
 		end
 	elseif playerInput[1] == MConf.CommandDeleteAllData then
 		if ply:IsSuperAdmin() then
@@ -371,13 +381,13 @@ hook.Add( "PlayerSay", "Metro::MainHook::PlayerSay", function( ply, text )
 				file.Delete("metro/"..v)
 			end
 
-			MMNotification(ply, "Every data from players have been deleted. Server restarting in 3 seconds...", 0, 3)
-
-			timer.Simple(3, function()
+			GNLib.AutoTranslate( MConf.LanguageType, "Every data from players have been deleted. Server restarting in 5 seconds...", function(callback) MMNotification(ply, callback, 2, 3) end )
+			
+			timer.Simple(5, function()
 				game.ConsoleCommand("changelevel "..game.GetMap().."\n")
 			end)
 		else
-			MMNotification(ply, "You have not access to this command !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "You have not access to this command !", function(callback) MMNotification(ply, callback, 1, 3) end )
 		end
 	elseif playerInput[1] == MConf.CommandUnlockData then
 		if MConf.CommandUnlockDataAllowedRanks[ply:GetUserGroup()] then
@@ -400,15 +410,15 @@ hook.Add( "PlayerSay", "Metro::MainHook::PlayerSay", function( ply, text )
 						sql.Query("UPDATE MetroCharacters SET CharacterAngle = NULL WHERE CharacterOwner = '"..ent:SteamID64().."' AND CharacterID = '"..ent:GetNWInt("Metro::CharacterID").."'")
 					end
 
-					MMNotification(ply, "You have reset the value for this player !", 0, 3)
+					GNLib.AutoTranslate( MConf.LanguageType, "You have reset the value for this player !", function(callback) MMNotification(ply, callback, 0, 3) end )
 				else
-					MMNotification(ply, "You have to look at a player !", 1, 3)
+					GNLib.AutoTranslate( MConf.LanguageType, "You have to look at a player !", function(callback) MMNotification(ply, callback, 1, 3) end )
 				end
 			else
-				MMNotification(ply, "You have to specify an argument (pos, angle, weapons, health, armor, food, money) !", 1, 3)
+				GNLib.AutoTranslate( MConf.LanguageType, "You have to specify an argument !", function(callback) MMNotification(ply, callback.." (position, angle, weapons, health, armor, food, money)", 1, 3) end )
 			end
 		else
-			MMNotification(ply, "You have not access to this command !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "You have not access to this command !", function(callback) MMNotification(ply, callback, 1, 3) end )
 		end
 	end
 
@@ -462,7 +472,8 @@ net.Receive("Metro::PlyRequest", function(len, ply)
 		if charChoosed then
 			PlyDefineChar(charChoosed, ply)
 		else
-			MMNotification(ply, "Error, you already playing this character !", 1, 3)
+			--MMNotification(ply, "Error, you already playing this character !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "Error, you already playing this character !", function(callback) MMNotification(ply, callback, 1, 3) end )
 
 			-- Reopening menu or player will be stucked
 			net.Start("Metro::OrderToPlayer")
@@ -475,7 +486,8 @@ net.Receive("Metro::PlyRequest", function(len, ply)
 		if ply:GetNWInt("Metro::CharacterID") ~= charChoosed then
 			PlyDefineChar(charChoosed, ply)
 		else
-			MMNotification(ply, "Error, you already playing this character !", 1, 3)
+			--MMNotification(ply, "Error, you already playing this character !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "Error, you already playing this character !", function(callback) MMNotification(ply, callback, 1, 3) end )
 
 			-- Reopening menu or player will be stucked
 			net.Start("Metro::OrderToPlayer")
@@ -486,10 +498,12 @@ net.Receive("Metro::PlyRequest", function(len, ply)
 	elseif request == "deleteChar" then
 		local charChoosed = net.ReadInt(4)
 		if ply:GetNWInt("Metro::CharacterID") == charChoosed then
-			MMNotification(ply, "Error, you can't delete this character while you're playing !", 1, 3)
+			--MMNotification(ply, "Error, you can't delete this character while you're playing !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "Error, you can't delete this character while you're playing !", function(callback) MMNotification(ply, callback, 1, 3) end )
 		else
 			sql.Query("DELETE FROM MetroCharacters WHERE CharacterOwner = '"..ply:SteamID64().."' AND CharacterID = '"..charChoosed.."'")
-			MMNotification(ply, "Character deleted !", 0, 3)
+			--MMNotification(ply, "Character deleted !", 0, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "Character deleted !", function(callback) MMNotification(ply, callback, 0, 3) end )
 		end
 	elseif request == "createCharacter" then
 		local charChoosed = net.ReadInt(4)
@@ -513,9 +527,11 @@ net.Receive("Metro::PlyRequest", function(len, ply)
 		if skinAllowed then
 			sql.Query("INSERT INTO MetroCharacters(CharacterOwner,CharacterID,CharacterName,CharacterSkin,CharacterBodygroup,CharacterMoney) VALUES('"..ply:SteamID64().."', '"..charChoosed.."', '"..charName.."', '"..charSkin.."', '"..charBodygroup.."', 0)") -- SQL
 
-			MMNotification(ply, "Character created !", 0, 3)
+			--MMNotification(ply, "Character created !", 0, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "Character created !", function(callback) MMNotification(ply, callback, 0, 3) end )
 		else
-			MMNotification(ply, "This skin is not allowed for you !", 1, 3)
+			--MMNotification(ply, "This skin is not allowed for you !", 1, 3)
+			GNLib.AutoTranslate( MConf.LanguageType, "This skin is not allowed for you !", function(callback) MMNotification(ply, callback, 1, 3) end )
 		end
 		getAllChars(ply) -- Reloading player menu
 	elseif request == "checkName" then

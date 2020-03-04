@@ -1,6 +1,8 @@
 MConf = MConf or {}
 MConf.MainVersion = 1.5 -- Don't touch it !
 
+MConf.LanguageType = "fr" -- fr, en, ar, it, es, pt, ja
+
 --[[ Skins ]]
 MConf.DefaultSkin = "models/half-dead/metroll/m1b1.mdl" -- default skin
 MConf.DefaultSkinBodygroups = 5 -- How much bodygroups category is available in the default skin ? (Don't touch it if you don't know what is it !)
